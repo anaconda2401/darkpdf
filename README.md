@@ -1,6 +1,8 @@
-# Shadow Reader Workspace
+# DarkPDF
 
-A privacy-first, zero-server local PDF reader built as a single static file. Designed with a strict, utility-first design system, Shadow Reader allows you to read heavy documents, syllabi, and research papers in high-resolution dark mode entirely within your browser.
+A privacy-first, zero-server local PDF reader built as a single static file. Designed with a strict, utility-first design system, DarkPDF allows you to read heavy documents, syllabi, and research papers in high-resolution dark mode entirely within your browser.
+
+**Live Environment:** [https://anaconda2401.github.io/darkpdf/](https://anaconda2401.github.io/darkpdf/)
 
 ## Features
 
@@ -14,17 +16,15 @@ A privacy-first, zero-server local PDF reader built as a single static file. Des
 
 ## Usage
 
-Because Shadow Reader is completely static, you have two ways to use it:
+Because DarkPDF is completely static, you have two ways to use it:
 
-**Option 1: Local File**
-1. Download `index.html`.
+**Option 1: Live Web App (Recommended)**
+1. Navigate to [DarkPDF](https://anaconda2401.github.io/darkpdf/).
+2. Select a PDF from your local machine to start reading securely in the browser.
+
+**Option 2: Local File**
+1. Clone this repository or download the `index.html` file.
 2. Double-click the file to open it in any modern browser (Chrome, Edge, Brave, Firefox).
-3. Select a PDF to start reading.
-
-**Option 2: GitHub Pages (Recommended)**
-1. Fork or clone this repository.
-2. Enable GitHub Pages in your repository settings (deploying from the `main` branch).
-3. Access your reader from anywhere. Since it runs 100% client-side, it is completely safe to host publicly.
 
 ## License
 
