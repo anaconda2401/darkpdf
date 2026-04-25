@@ -13,77 +13,55 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
 
     <style>
-        /* =========================================
-           DESIGN SYSTEM
-           ========================================= */
         :root {
-            /* Colors: Strict monochrome palette */
             --bg-base: #0a0a0a;
             --bg-surface: #141414;
             --bg-surface-hover: #1e1e1e;
-            
             --border-subtle: #262626;
             --border-hover: #404040;
             --border-focus: #525252;
-            
             --text-primary: #f5f5f5;
             --text-secondary: #a3a3a3;
             --text-disabled: #525252;
-            
-            /* Typography: Defined scale */
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --text-xs: 0.75rem;     /* 12px */
-            --text-sm: 0.875rem;    /* 14px */
-            --text-base: 1rem;      /* 16px */
-            --text-lg: 1.125rem;    /* 18px */
-            
+            --text-xs: 0.75rem;
+            --text-sm: 0.875rem;
+            --text-base: 1rem;
+            --text-lg: 1.125rem;
             --weight-regular: 400;
             --weight-medium: 500;
-            
             --leading-none: 1;
             --leading-tight: 1.25;
             --leading-normal: 1.5;
-
-            /* Spacing: 4px baseline grid */
-            --space-1: 0.25rem;  /* 4px */
-            --space-2: 0.5rem;   /* 8px */
-            --space-3: 0.75rem;  /* 12px */
-            --space-4: 1rem;     /* 16px */
-            --space-6: 1.5rem;   /* 24px */
-            --space-8: 2rem;     /* 32px */
-            --space-12: 3rem;    /* 48px */
-            --space-16: 4rem;    /* 64px */
-
-            /* Layout */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
             --radius-sm: 4px;
             --radius-md: 6px;
             --radius-lg: 8px;
             --container-width: 680px;
-
-            /* Animations: Purposeful easing */
             --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
             --duration-fast: 150ms;
             --duration-normal: 250ms;
         }
 
-        /* Light Theme Overrides */
         body.light-theme {
             --bg-base: #f9fafb;
             --bg-surface: #ffffff;
             --bg-surface-hover: #f3f4f6;
-            
             --border-subtle: #e5e7eb;
             --border-hover: #d1d5db;
             --border-focus: #9ca3af;
-            
             --text-primary: #111827;
             --text-secondary: #4b5563;
             --text-disabled: #9ca3af;
         }
 
-        /* =========================================
-           GLOBAL RESETS & TYPOGRAPHY
-           ========================================= */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -105,11 +83,6 @@
                         color var(--duration-normal) var(--ease-standard);
         }
 
-        /* =========================================
-           COMPONENTS
-           ========================================= */
-        
-        /* Buttons */
         .btn {
             appearance: none;
             background: transparent;
@@ -138,7 +111,6 @@
             outline-offset: 2px;
         }
 
-        /* Layout Views */
         .view {
             display: none;
             flex-direction: column;
@@ -151,7 +123,6 @@
             display: flex;
         }
 
-        /* Home View Specifics */
         .home-container {
             width: 100%;
             max-width: var(--container-width);
@@ -170,7 +141,6 @@
             border-bottom: 1px solid var(--border-subtle);
         }
 
-        /* Upload Card */
         .upload-card {
             background-color: var(--bg-surface);
             border: 1px solid var(--border-subtle);
@@ -187,7 +157,7 @@
         .upload-card:hover {
             background-color: var(--bg-surface-hover);
             border-color: var(--border-hover);
-            transform: translateY(-2px); /* Subtle lift constraint */
+            transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
@@ -206,7 +176,6 @@
 
         input[type="file"] { display: none; }
 
-        /* List Items */
         .list-group {
             display: flex;
             flex-direction: column;
@@ -243,7 +212,7 @@
         }
 
         .list-item-icon {
-            width: var(--text-base); /* Proportional to text */
+            width: var(--text-base);
             height: var(--text-base);
             fill: var(--text-secondary);
             flex-shrink: 0;
@@ -261,7 +230,6 @@
             padding: var(--space-4) 0;
         }
 
-        /* Reader View Specifics */
         .topbar {
             width: 100%;
             padding: var(--space-3) var(--space-6);
@@ -284,7 +252,6 @@
             padding: var(--space-8) 0;
         }
 
-        /* Loading Skeletons */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
@@ -293,20 +260,19 @@
         .skeleton-page {
             width: 90%;
             max-width: 800px;
-            aspect-ratio: 1 / 1.414; /* Standard A4 proportion */
+            aspect-ratio: 1 / 1.414;
             background-color: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-sm);
             animation: pulse 2s var(--ease-standard) infinite;
         }
 
-        /* PDF Rendering */
         .pdf-page-wrapper {
             position: relative;
             border-radius: var(--radius-sm);
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
             overflow: hidden;
-            background-color: #ffffff; /* Baseline for rendering */
+            background-color: #ffffff;
         }
 
         body.light-theme .pdf-page-wrapper {
@@ -322,6 +288,7 @@
         body.light-theme canvas { filter: none; }
 
         .textLayer { opacity: 1; }
+        
         .textLayer ::selection {
             background: rgba(163, 163, 163, 0.4);
             color: transparent;
@@ -347,7 +314,7 @@
             <section>
                 <div class="section-header">Recent Files</div>
                 <div class="list-group" id="recent-list">
-                    </div>
+                </div>
             </section>
 
         </div>
@@ -359,13 +326,12 @@
             <button class="btn" id="btn-theme">Toggle Theme</button>
         </header>
         <main class="document-container" id="pdf-container">
-            </main>
+        </main>
     </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // DOM Elements
         const views = {
             home: document.getElementById('home-view'),
             reader: document.getElementById('reader-view')
@@ -378,7 +344,6 @@
             btnTheme: document.getElementById('btn-theme')
         };
 
-        // State Management
         function setView(viewName) {
             Object.values(views).forEach(v => v.classList.remove('is-active'));
             views[viewName].classList.add('is-active');
@@ -392,12 +357,10 @@
 
         elements.btnClose.addEventListener('click', () => setView('home'));
 
-        // Theme Toggle
         elements.btnTheme.addEventListener('click', () => {
             document.body.classList.toggle('light-theme');
         });
 
-        // IndexedDB Initialization
         let db;
         const request = indexedDB.open("DocumentStore", 1);
 
@@ -413,7 +376,6 @@
             updateRecentFilesList();
         };
 
-        // File Input Handler
         elements.fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file || file.type !== 'application/pdf') {
@@ -431,7 +393,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // Database Operations
         function saveFileToDB(fileName, arrayBuffer) {
             const tx = db.transaction(['files'], 'readwrite');
             const store = tx.objectStore('files');
@@ -482,7 +443,7 @@
                         const getReq = getStore.get(file.name);
                         getReq.onsuccess = () => {
                             if (getReq.result) {
-                                saveFileToDB(file.name, getReq.result.data); // Update timestamp
+                                saveFileToDB(file.name, getReq.result.data); 
                                 renderDocument(getReq.result.data);
                             }
                         };
@@ -492,11 +453,9 @@
             };
         }
 
-        // PDF Rendering Logic
         function renderDocument(arrayBuffer) {
             setView('reader');
             
-            // Show structured skeleton loaders while processing
             elements.pdfContainer.innerHTML = `
                 <div class="skeleton-page"></div>
                 <div class="skeleton-page" style="opacity: 0.5;"></div>
@@ -506,7 +465,7 @@
             const loadingTask = pdfjsLib.getDocument({ data: typedarray });
 
             loadingTask.promise.then(pdf => {
-                elements.pdfContainer.innerHTML = ''; // Clear skeletons
+                elements.pdfContainer.innerHTML = ''; 
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     pdf.getPage(pageNum).then(page => {
@@ -555,7 +514,7 @@
                     });
                 }
             }).catch(error => {
-                console.error('Rendering Error:', error);
+                console.error(error);
                 elements.pdfContainer.innerHTML = `<div class="empty-state">Failed to render document.</div>`;
             });
         }
