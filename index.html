@@ -50,7 +50,7 @@
             --duration-normal: 250ms;
         }
 
-        body.light-theme {
+        body.theme-light {
             --bg-base: #f9fafb;
             --bg-surface: #ffffff;
             --bg-surface-hover: #f3f4f6;
@@ -109,6 +109,99 @@
         .btn:focus-visible {
             outline: 2px solid var(--border-focus);
             outline-offset: 2px;
+        }
+
+        .settings-toggle {
+            position: fixed;
+            top: var(--space-4);
+            right: var(--space-4);
+            z-index: 1000;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            cursor: pointer;
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--duration-fast) var(--ease-standard);
+        }
+
+        .settings-toggle:hover {
+            background-color: var(--bg-surface-hover);
+        }
+
+        .settings-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: calc(var(--space-4) + 40px + var(--space-2));
+            right: var(--space-4);
+            z-index: 1000;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            width: 260px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .settings-panel.is-open {
+            display: flex;
+        }
+
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .settings-label {
+            font-size: var(--text-xs);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: var(--weight-medium);
+        }
+
+        .toggle-group {
+            display: flex;
+            flex-wrap: wrap;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            min-width: 50%;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: var(--space-2);
+            font-size: var(--text-sm);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-standard);
+        }
+
+        .toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .toggle-btn.is-active {
+            background: var(--bg-surface-hover);
+            color: var(--text-primary);
+            font-weight: var(--weight-medium);
         }
 
         .view {
@@ -305,19 +398,38 @@
             background-color: #ffffff;
         }
 
-        body.light-theme .pdf-page-wrapper {
+        body.theme-light .pdf-page-wrapper {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
+        .pdf-page-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+            background: transparent;
+            transition: background var(--duration-normal) var(--ease-standard);
+            z-index: 5;
+        }
+
+        body.theme-light.filter-sepia .pdf-page-wrapper::after { background: #f4ecd8; }
+        body.theme-light.filter-peach .pdf-page-wrapper::after { background: #EDD1B0; }
+        body.theme-light.filter-soft .pdf-page-wrapper::after { background: #e5e5e5; }
+
         canvas {
             display: block;
-            filter: invert(100%) hue-rotate(180deg) contrast(90%) brightness(95%);
             transition: filter var(--duration-normal) var(--ease-standard);
         }
 
-        body.light-theme canvas { filter: none; }
+        body.theme-dark.filter-default canvas { filter: invert(100%) hue-rotate(180deg) contrast(90%) brightness(95%); }
+        body.theme-dark.filter-soft canvas { filter: invert(90%) hue-rotate(180deg) contrast(85%) brightness(105%); }
+        body.theme-dark.filter-sepia canvas { filter: invert(90%) hue-rotate(180deg) sepia(50%) contrast(85%) brightness(100%); }
+        body.theme-dark.filter-peach canvas { filter: invert(90%) hue-rotate(180deg) sepia(50%) saturate(200%) contrast(85%) brightness(100%); }
 
-        .textLayer { opacity: 1; }
+        body.theme-light canvas { filter: none; }
+
+        .textLayer { opacity: 1; z-index: 10; }
         
         .textLayer ::selection {
             background: rgba(163, 163, 163, 0.4);
@@ -327,11 +439,33 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
-<body>
+<body class="theme-dark filter-default">
+
+    <button class="settings-toggle" id="btn-settings" title="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </button>
+
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-group">
+            <div class="settings-label">Theme</div>
+            <div class="toggle-group" id="theme-toggles">
+                <button class="toggle-btn" data-theme-val="theme-dark">Dark</button>
+                <button class="toggle-btn" data-theme-val="theme-light">Light</button>
+            </div>
+        </div>
+        <div class="settings-group">
+            <div class="settings-label">Reading Filter</div>
+            <div class="toggle-group" id="filter-toggles">
+                <button class="toggle-btn" data-filter-val="filter-default">Default</button>
+                <button class="toggle-btn" data-filter-val="filter-sepia">Sepia</button>
+                <button class="toggle-btn" data-filter-val="filter-peach">Peach</button>
+                <button class="toggle-btn" data-filter-val="filter-soft">Soft Grey</button>
+            </div>
+        </div>
+    </div>
 
     <div id="home-view" class="view is-active">
         <div class="home-container">
-            
             <section>
                 <div class="section-header">Actions</div>
                 <label class="upload-card" for="file-input">
@@ -340,23 +474,18 @@
                     <input type="file" id="file-input" accept="application/pdf" />
                 </label>
             </section>
-
             <section>
                 <div class="section-header">Recent Files</div>
-                <div class="list-group" id="recent-list">
-                </div>
+                <div class="list-group" id="recent-list"></div>
             </section>
-
         </div>
     </div>
 
     <div id="reader-view" class="view">
         <header class="topbar">
             <button class="btn" id="btn-close">Close Document</button>
-            <button class="btn" id="btn-theme">Toggle Theme</button>
         </header>
-        <main class="document-container" id="pdf-container">
-        </main>
+        <main class="document-container" id="pdf-container"></main>
     </div>
 
     <script>
@@ -371,8 +500,53 @@
             pdfContainer: document.getElementById('pdf-container'),
             recentList: document.getElementById('recent-list'),
             btnClose: document.getElementById('btn-close'),
-            btnTheme: document.getElementById('btn-theme')
+            btnSettings: document.getElementById('btn-settings'),
+            settingsPanel: document.getElementById('settings-panel'),
+            themeBtns: document.querySelectorAll('#theme-toggles .toggle-btn'),
+            filterBtns: document.querySelectorAll('#filter-toggles .toggle-btn')
         };
+
+        const savedTheme = localStorage.getItem('dp-theme') || 'theme-dark';
+        const savedFilter = localStorage.getItem('dp-filter') || 'filter-default';
+        document.body.className = `${savedTheme} ${savedFilter}`;
+
+        function updateSettingsUI() {
+            elements.themeBtns.forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.themeVal === document.body.classList[0]);
+            });
+            elements.filterBtns.forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.filterVal === document.body.classList[1]);
+            });
+        }
+        updateSettingsUI();
+
+        elements.btnSettings.addEventListener('click', () => {
+            elements.settingsPanel.classList.toggle('is-open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!elements.settingsPanel.contains(e.target) && !elements.btnSettings.contains(e.target)) {
+                elements.settingsPanel.classList.remove('is-open');
+            }
+        });
+
+        elements.themeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const currentFilter = document.body.classList[1];
+                document.body.className = `${btn.dataset.themeVal} ${currentFilter}`;
+                localStorage.setItem('dp-theme', btn.dataset.themeVal);
+                updateSettingsUI();
+            });
+        });
+
+        elements.filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const currentTheme = document.body.classList[0];
+                document.body.className = `${currentTheme} ${btn.dataset.filterVal}`;
+                localStorage.setItem('dp-filter', btn.dataset.filterVal);
+                updateSettingsUI();
+            });
+        });
 
         function setView(viewName) {
             Object.values(views).forEach(v => v.classList.remove('is-active'));
@@ -386,10 +560,6 @@
         }
 
         elements.btnClose.addEventListener('click', () => setView('home'));
-
-        elements.btnTheme.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-        });
 
         let db;
         const request = indexedDB.open("DocumentStore", 1);
@@ -561,7 +731,6 @@
                     });
                 }
             }).catch(error => {
-                console.error(error);
                 elements.pdfContainer.innerHTML = `<div class="empty-state">Failed to render document.</div>`;
             });
         }
