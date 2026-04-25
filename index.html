@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; connect-src 'self' blob: data: https://cdnjs.cloudflare.com;">
+    
+    <title>Document Reader</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
+
+    <style>
+        /* =========================================
+           DESIGN SYSTEM
+           ========================================= */
+        :root {
+            /* Colors: Strict monochrome palette */
+            --bg-base: #0a0a0a;
+            --bg-surface: #141414;
+            --bg-surface-hover: #1e1e1e;
+            
+            --border-subtle: #262626;
+            --border-hover: #404040;
+            --border-focus: #525252;
+            
+            --text-primary: #f5f5f5;
+            --text-secondary: #a3a3a3;
+            --text-disabled: #525252;
+            
+            /* Typography: Defined scale */
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --text-xs: 0.75rem;     /* 12px */
+            --text-sm: 0.875rem;    /* 14px */
+            --text-base: 1rem;      /* 16px */
+            --text-lg: 1.125rem;    /* 18px */
+            
+            --weight-regular: 400;
+            --weight-medium: 500;
+            
+            --leading-none: 1;
+            --leading-tight: 1.25;
+            --leading-normal: 1.5;
+
+            /* Spacing: 4px baseline grid */
+            --space-1: 0.25rem;  /* 4px */
+            --space-2: 0.5rem;   /* 8px */
+            --space-3: 0.75rem;  /* 12px */
+            --space-4: 1rem;     /* 16px */
+            --space-6: 1.5rem;   /* 24px */
+            --space-8: 2rem;     /* 32px */
+            --space-12: 3rem;    /* 48px */
+            --space-16: 4rem;    /* 64px */
+
+            /* Layout */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --container-width: 680px;
+
+            /* Animations: Purposeful easing */
+            --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+            --duration-fast: 150ms;
+            --duration-normal: 250ms;
+        }
+
+        /* Light Theme Overrides */
+        body.light-theme {
+            --bg-base: #f9fafb;
+            --bg-surface: #ffffff;
+            --bg-surface-hover: #f3f4f6;
+            
+            --border-subtle: #e5e7eb;
+            --border-hover: #d1d5db;
+            --border-focus: #9ca3af;
+            
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-disabled: #9ca3af;
+        }
+
+        /* =========================================
+           GLOBAL RESETS & TYPOGRAPHY
+           ========================================= */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: var(--text-base);
+            font-weight: var(--weight-regular);
+            line-height: var(--leading-normal);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color var(--duration-normal) var(--ease-standard), 
+                        color var(--duration-normal) var(--ease-standard);
+        }
+
+        /* =========================================
+           COMPONENTS
+           ========================================= */
+        
+        /* Buttons */
+        .btn {
+            appearance: none;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            font-size: var(--text-sm);
+            font-weight: var(--weight-medium);
+            padding: var(--space-2) var(--space-4);
+            transition: all var(--duration-fast) var(--ease-standard);
+            line-height: var(--leading-none);
+        }
+
+        .btn:hover {
+            background-color: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 2px;
+        }
+
+        /* Layout Views */
+        .view {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            flex: 1;
+        }
+
+        .view.is-active {
+            display: flex;
+        }
+
+        /* Home View Specifics */
+        .home-container {
+            width: 100%;
+            max-width: var(--container-width);
+            padding: var(--space-16) var(--space-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-12);
+        }
+
+        .section-header {
+            font-size: var(--text-sm);
+            font-weight: var(--weight-medium);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-4);
+            padding-bottom: var(--space-2);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        /* Upload Card */
+        .upload-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-12) var(--space-6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-standard);
+        }
+
+        .upload-card:hover {
+            background-color: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px); /* Subtle lift constraint */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-card-icon {
+            width: var(--space-6);
+            height: var(--space-6);
+            margin-bottom: var(--space-4);
+            fill: var(--text-secondary);
+        }
+
+        .upload-card-text {
+            font-size: var(--text-base);
+            font-weight: var(--weight-medium);
+            color: var(--text-primary);
+        }
+
+        input[type="file"] { display: none; }
+
+        /* List Items */
+        .list-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3) var(--space-4);
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-standard);
+        }
+
+        .list-item:hover {
+            background-color: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+        }
+
+        .list-item-title {
+            font-size: var(--text-sm);
+            font-weight: var(--weight-regular);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 75%;
+        }
+
+        .list-item-icon {
+            width: var(--text-base); /* Proportional to text */
+            height: var(--text-base);
+            fill: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .list-item-meta {
+            font-size: var(--text-xs);
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .empty-state {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            padding: var(--space-4) 0;
+        }
+
+        /* Reader View Specifics */
+        .topbar {
+            width: 100%;
+            padding: var(--space-3) var(--space-6);
+            background-color: var(--bg-base);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .document-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-8);
+            align-items: center;
+            width: 100%;
+            padding: var(--space-8) 0;
+        }
+
+        /* Loading Skeletons */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .skeleton-page {
+            width: 90%;
+            max-width: 800px;
+            aspect-ratio: 1 / 1.414; /* Standard A4 proportion */
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            animation: pulse 2s var(--ease-standard) infinite;
+        }
+
+        /* PDF Rendering */
+        .pdf-page-wrapper {
+            position: relative;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            background-color: #ffffff; /* Baseline for rendering */
+        }
+
+        body.light-theme .pdf-page-wrapper {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        canvas {
+            display: block;
+            filter: invert(100%) hue-rotate(180deg) contrast(90%) brightness(95%);
+            transition: filter var(--duration-normal) var(--ease-standard);
+        }
+
+        body.light-theme canvas { filter: none; }
+
+        .textLayer { opacity: 1; }
+        .textLayer ::selection {
+            background: rgba(163, 163, 163, 0.4);
+            color: transparent;
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+</head>
+<body>
+
+    <div id="home-view" class="view is-active">
+        <div class="home-container">
+            
+            <section>
+                <div class="section-header">Actions</div>
+                <label class="upload-card" for="file-input">
+                    <svg class="upload-card-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11 8 15.01z"/></svg>
+                    <span class="upload-card-text">Open File</span>
+                    <input type="file" id="file-input" accept="application/pdf" />
+                </label>
+            </section>
+
+            <section>
+                <div class="section-header">Recent Files</div>
+                <div class="list-group" id="recent-list">
+                    </div>
+            </section>
+
+        </div>
+    </div>
+
+    <div id="reader-view" class="view">
+        <header class="topbar">
+            <button class="btn" id="btn-close">Close Document</button>
+            <button class="btn" id="btn-theme">Toggle Theme</button>
+        </header>
+        <main class="document-container" id="pdf-container">
+            </main>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // DOM Elements
+        const views = {
+            home: document.getElementById('home-view'),
+            reader: document.getElementById('reader-view')
+        };
+        const elements = {
+            fileInput: document.getElementById('file-input'),
+            pdfContainer: document.getElementById('pdf-container'),
+            recentList: document.getElementById('recent-list'),
+            btnClose: document.getElementById('btn-close'),
+            btnTheme: document.getElementById('btn-theme')
+        };
+
+        // State Management
+        function setView(viewName) {
+            Object.values(views).forEach(v => v.classList.remove('is-active'));
+            views[viewName].classList.add('is-active');
+            
+            if (viewName === 'home') {
+                elements.pdfContainer.innerHTML = ''; 
+                elements.fileInput.value = ''; 
+                updateRecentFilesList(); 
+            }
+        }
+
+        elements.btnClose.addEventListener('click', () => setView('home'));
+
+        // Theme Toggle
+        elements.btnTheme.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+        });
+
+        // IndexedDB Initialization
+        let db;
+        const request = indexedDB.open("DocumentStore", 1);
+
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains('files')) {
+                db.createObjectStore('files', { keyPath: 'name' });
+            }
+        };
+
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            updateRecentFilesList();
+        };
+
+        // File Input Handler
+        elements.fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file || file.type !== 'application/pdf') {
+                this.value = ''; 
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const arrayBuffer = event.target.result;
+                const safeName = file.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                saveFileToDB(safeName, arrayBuffer);
+                renderDocument(arrayBuffer);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Database Operations
+        function saveFileToDB(fileName, arrayBuffer) {
+            const tx = db.transaction(['files'], 'readwrite');
+            const store = tx.objectStore('files');
+            store.put({ name: fileName, data: arrayBuffer, timestamp: Date.now() });
+            tx.oncomplete = updateRecentFilesList;
+        }
+
+        function updateRecentFilesList() {
+            const tx = db.transaction(['files'], 'readonly');
+            const store = tx.objectStore('files');
+            const req = store.getAll();
+
+            req.onsuccess = () => {
+                const files = req.result.sort((a, b) => b.timestamp - a.timestamp);
+                
+                if (files.length > 10) {
+                    const deleteTx = db.transaction(['files'], 'readwrite');
+                    const deleteStore = deleteTx.objectStore('files');
+                    for (let i = 10; i < files.length; i++) deleteStore.delete(files[i].name);
+                }
+
+                if (files.length === 0) {
+                    elements.recentList.innerHTML = '<div class="empty-state">No files opened recently.</div>';
+                    return;
+                }
+
+                elements.recentList.innerHTML = '';
+                files.slice(0, 10).forEach(file => {
+                    const date = new Date(file.timestamp);
+                    const isToday = date.toDateString() === new Date().toDateString();
+                    const dateStr = isToday 
+                        ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-item-title" title="${file.name}">
+                            <svg class="list-item-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                            ${file.name}
+                        </div>
+                        <div class="list-item-meta">${dateStr}</div>
+                    `;
+
+                    item.addEventListener('click', () => {
+                        const getTx = db.transaction(['files'], 'readonly');
+                        const getStore = getTx.objectStore('files');
+                        const getReq = getStore.get(file.name);
+                        getReq.onsuccess = () => {
+                            if (getReq.result) {
+                                saveFileToDB(file.name, getReq.result.data); // Update timestamp
+                                renderDocument(getReq.result.data);
+                            }
+                        };
+                    });
+                    elements.recentList.appendChild(item);
+                });
+            };
+        }
+
+        // PDF Rendering Logic
+        function renderDocument(arrayBuffer) {
+            setView('reader');
+            
+            // Show structured skeleton loaders while processing
+            elements.pdfContainer.innerHTML = `
+                <div class="skeleton-page"></div>
+                <div class="skeleton-page" style="opacity: 0.5;"></div>
+            `;
+
+            const typedarray = new Uint8Array(arrayBuffer);
+            const loadingTask = pdfjsLib.getDocument({ data: typedarray });
+
+            loadingTask.promise.then(pdf => {
+                elements.pdfContainer.innerHTML = ''; // Clear skeletons
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    pdf.getPage(pageNum).then(page => {
+                        const scale = window.innerWidth < 800 ? 1.0 : 1.5; 
+                        const viewport = page.getViewport({scale: scale});
+                        const outputScale = window.devicePixelRatio || 1;
+
+                        const pageWrapper = document.createElement('div');
+                        pageWrapper.className = 'pdf-page-wrapper';
+                        pageWrapper.style.width = Math.floor(viewport.width) + 'px';
+                        pageWrapper.style.height = Math.floor(viewport.height) + 'px';
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+
+                        canvas.width = Math.floor(viewport.width * outputScale);
+                        canvas.height = Math.floor(viewport.height * outputScale);
+                        canvas.style.width = Math.floor(viewport.width) + 'px';
+                        canvas.style.height = Math.floor(viewport.height) + 'px';
+
+                        pageWrapper.appendChild(canvas);
+                        elements.pdfContainer.appendChild(pageWrapper);
+
+                        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+                        page.render({
+                            canvasContext: context,
+                            transform: transform,
+                            viewport: viewport
+                        }).promise.then(() => {
+                            return page.getTextContent();
+                        }).then(textContent => {
+                            const textLayerDiv = document.createElement('div');
+                            textLayerDiv.className = 'textLayer';
+                            textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
+                            
+                            pageWrapper.appendChild(textLayerDiv);
+
+                            pdfjsLib.renderTextLayer({
+                                textContentSource: textContent,
+                                container: textLayerDiv,
+                                viewport: viewport,
+                                textDivs: []
+                            });
+                        });
+                    });
+                }
+            }).catch(error => {
+                console.error('Rendering Error:', error);
+                elements.pdfContainer.innerHTML = `<div class="empty-state">Failed to render document.</div>`;
+            });
+        }
+    </script>
+</body>
+</html>
