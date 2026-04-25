@@ -186,7 +186,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: var(--space-3) var(--space-4);
+            padding: var(--space-2) var(--space-4);
             background-color: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
@@ -208,7 +208,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 75%;
+            max-width: 70%;
         }
 
         .list-item-icon {
@@ -218,10 +218,40 @@
             flex-shrink: 0;
         }
 
+        .list-item-meta-container {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            flex-shrink: 0;
+        }
+
         .list-item-meta {
             font-size: var(--text-xs);
             color: var(--text-secondary);
-            flex-shrink: 0;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--duration-fast) var(--ease-standard);
+        }
+
+        .delete-btn:hover {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .delete-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
         }
 
         .empty-state {
@@ -400,6 +430,13 @@
             tx.oncomplete = updateRecentFilesList;
         }
 
+        function deleteFileFromDB(fileName) {
+            const tx = db.transaction(['files'], 'readwrite');
+            const store = tx.objectStore('files');
+            store.delete(fileName);
+            tx.oncomplete = updateRecentFilesList;
+        }
+
         function updateRecentFilesList() {
             const tx = db.transaction(['files'], 'readonly');
             const store = tx.objectStore('files');
@@ -434,10 +471,20 @@
                             <svg class="list-item-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                             ${file.name}
                         </div>
-                        <div class="list-item-meta">${dateStr}</div>
+                        <div class="list-item-meta-container">
+                            <div class="list-item-meta">${dateStr}</div>
+                            <button class="delete-btn" title="Remove file">
+                                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                            </button>
+                        </div>
                     `;
 
-                    item.addEventListener('click', () => {
+                    item.addEventListener('click', (e) => {
+                        if (e.target.closest('.delete-btn')) {
+                            deleteFileFromDB(file.name);
+                            return;
+                        }
+
                         const getTx = db.transaction(['files'], 'readonly');
                         const getStore = getTx.objectStore('files');
                         const getReq = getStore.get(file.name);
