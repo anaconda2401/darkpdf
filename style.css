@@ -68,19 +68,8 @@ body {
 .btn:hover { background-color: var(--bg-surface-hover); border-color: var(--border-hover); }
 .btn:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 
-/* Unified Settings Button */
 .btn-settings {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--duration-fast) var(--ease-standard);
-    width: 32px;
-    height: 32px;
+    background: transparent; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; transition: all var(--duration-fast) var(--ease-standard); width: 32px; height: 32px;
 }
 .btn-settings:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
 .btn-settings svg { width: 18px; height: 18px; fill: currentColor; }
@@ -128,9 +117,7 @@ input[type="file"] { display: none; }
     width: 100%; padding: var(--space-3) var(--space-6); background-color: var(--bg-base); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 900;
 }
 
-.topbar-right {
-    display: flex; align-items: center; gap: var(--space-4);
-}
+.topbar-right { display: flex; align-items: center; gap: var(--space-4); }
 
 .zoom-controls, .page-indicator {
     display: flex; align-items: center; height: 32px; color: var(--text-secondary); font-size: var(--text-sm);
@@ -153,7 +140,17 @@ input[type="file"] { display: none; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 .skeleton-page { width: 90%; max-width: 800px; aspect-ratio: 1 / 1.414; background-color: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); animation: pulse 2s var(--ease-standard) infinite; }
 
-.pdf-page-wrapper { position: relative; border-radius: var(--radius-sm); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2); overflow: hidden; background-color: #ffffff; }
+/* FIX: Filter is applied to the wrapper to prevent white flashes */
+.pdf-page-wrapper { 
+    position: relative; border-radius: var(--radius-sm); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2); overflow: hidden; background-color: #ffffff; 
+    transition: filter var(--duration-normal) var(--ease-standard);
+}
+
+body.theme-dark.filter-default .pdf-page-wrapper { filter: invert(100%) hue-rotate(180deg) contrast(90%) brightness(95%); }
+body.theme-dark.filter-soft .pdf-page-wrapper { filter: invert(90%) hue-rotate(180deg) contrast(85%) brightness(105%); }
+body.theme-dark.filter-sepia .pdf-page-wrapper { filter: invert(90%) hue-rotate(180deg) sepia(50%) contrast(85%) brightness(100%); }
+body.theme-dark.filter-peach .pdf-page-wrapper { filter: invert(90%) hue-rotate(180deg) sepia(50%) saturate(200%) contrast(85%) brightness(100%); }
+
 body.theme-light .pdf-page-wrapper { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
 
 .pdf-page-wrapper::after { content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; background: transparent; transition: background var(--duration-normal) var(--ease-standard); z-index: 5; }
@@ -161,12 +158,7 @@ body.theme-light.filter-sepia .pdf-page-wrapper::after { background: #f4ecd8; }
 body.theme-light.filter-peach .pdf-page-wrapper::after { background: #EDD1B0; }
 body.theme-light.filter-soft .pdf-page-wrapper::after { background: #e5e5e5; }
 
-canvas { display: block; transition: filter var(--duration-normal) var(--ease-standard); }
-body.theme-dark.filter-default canvas { filter: invert(100%) hue-rotate(180deg) contrast(90%) brightness(95%); }
-body.theme-dark.filter-soft canvas { filter: invert(90%) hue-rotate(180deg) contrast(85%) brightness(105%); }
-body.theme-dark.filter-sepia canvas { filter: invert(90%) hue-rotate(180deg) sepia(50%) contrast(85%) brightness(100%); }
-body.theme-dark.filter-peach canvas { filter: invert(90%) hue-rotate(180deg) sepia(50%) saturate(200%) contrast(85%) brightness(100%); }
-body.theme-light canvas { filter: none; }
+canvas { display: block; }
 
 .textLayer { opacity: 1; z-index: 10; }
 .textLayer ::selection { background: rgba(163, 163, 163, 0.4); color: transparent; }
