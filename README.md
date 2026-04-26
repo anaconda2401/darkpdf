@@ -1,31 +1,84 @@
 # DarkPDF
 
-A privacy-first, zero-server local PDF reader built as a single static file. Designed with a strict, utility-first design system, DarkPDF allows you to read heavy documents, syllabi, and research papers in high-resolution dark mode entirely within your browser.
+DarkPDF is a privacy-focused, client-side PDF reader designed for clean, distraction-free reading with high-quality dark mode rendering. The application runs entirely in the browser with no server interaction, ensuring that all documents remain local to the user.
 
-**Live Environment:** [https://anaconda2401.github.io/darkpdf/](https://anaconda2401.github.io/darkpdf/)
+
+
+## Overview
+
+DarkPDF provides a minimal and efficient interface for viewing PDF documents with enhanced readability. It leverages browser-native capabilities and PDF.js to deliver smooth rendering, persistent local storage, and customizable viewing modes.
+
+
 
 ## Features
 
-* **Privacy by Design:** No backend, no telemetry, and no external tracking. Your files never leave your device.
-* **Local Storage (IndexedDB):** Remembers your recently opened files instantly without requiring a local web server or configuration files.
-* **Smart Dark Mode:** Uses CSS inversion and hue-rotation to flip black/white text while preserving colors in charts and images. Includes a quick toggle to snap back to light mode for complex data visualizations.
-* **High-DPI Rendering:** Automatically scales canvas internal resolution to match your device pixel ratio, ensuring crystal-clear text on modern screens.
-* **Text Selection:** Generates a hidden text layer perfectly mapped over the PDF canvas, allowing you to highlight, select, and copy text naturally.
-* **Secure Environment:** Implements a strict Content Security Policy (CSP) and sanitizes inputs to prevent XSS and malicious file execution.
-* **System-Aware Favicon:** Uses an inline SVG favicon that adapts to the user's OS-level light/dark mode preferences.
+- Dark mode rendering using optimized canvas filters
+- Multiple reading filters (Default, Sepia, Peach, Soft)
+- Local file handling with no uploads or external processing
+- Recent files stored using IndexedDB
+- Smooth zoom controls with fit-to-width support
+- Automatic page tracking during scroll
+- Lightweight and fast rendering via PDF.js
+- Fully client-side with no data collection
 
-## Usage
 
-Because DarkPDF is completely static, you have two ways to use it:
 
-**Option 1: Live Web App (Recommended)**
-1. Navigate to [DarkPDF](https://anaconda2401.github.io/darkpdf/).
-2. Select a PDF from your local machine to start reading securely in the browser.
+## Project Structure
 
-**Option 2: Local File**
-1. Clone this repository or download the `index.html` file.
-2. Double-click the file to open it in any modern browser (Chrome, Edge, Brave, Firefox).
+```
+DarkPDF/
+│
+├── index.html     # Application structure and UI layout
+├── style.css      # Styling system and theme configuration
+├── app.js         # Core logic and PDF rendering engine
+└── README.md
+```
+
+
+
+## Getting Started
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/anaconda2401/darkpdf.git
+cd darkpdf
+```
+
+### Run the Application
+
+Open `index.html` in any modern browser.
+
+
+
+## Technology Stack
+
+- HTML5
+- CSS3 (Custom Properties)
+- Vanilla JavaScript
+- PDF.js (via CDN)
+
+
+
+## Design Principles
+
+- Fully client-side execution
+- Minimal and consistent interface
+- Privacy-first approach
+- Performance-focused rendering
+
+
+
+## Future Enhancements
+
+- Bookmarks
+- Annotations and highlights
+- Search within PDFs
+- Table of contents navigation
+- Mobile optimization
+
+
 
 ## License
 
-Open-source under the MIT License.
+MIT License
