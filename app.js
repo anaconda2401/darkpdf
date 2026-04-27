@@ -41,17 +41,17 @@ const counterObserver = new IntersectionObserver((entries) => {
     });
 }, { root: null, rootMargin: '0px', threshold: 0.5 });
 
-// Increased margin to 150% to prevent loading pop-in on fast scrolls
+// AGGRESSIVE RAM LIMITER: 50% margin means it only holds ~3 pages in memory max
 const renderObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         const pageNum = parseInt(entry.target.id.split('-')[1]);
         if (entry.isIntersecting) {
             renderPage(pageNum);
         } else {
-            cleanupPage(pageNum);
+            cleanupPage(pageNum); // Instantly drop off-screen pages to save RAM
         }
     });
-}, { root: null, rootMargin: '150% 0px 150% 0px', threshold: 0 });
+}, { root: null, rootMargin: '50% 0px 50% 0px', threshold: 0 });
 
 function updateSettingsUI() {
     elements.themeBtns.forEach(btn => btn.classList.toggle('is-active', btn.dataset.themeVal === document.body.classList[0]));
@@ -90,11 +90,113 @@ elements.filterBtns.forEach(btn => {
     });
 });
 
-elements.btnZoomIn.addEventListener('click', () => { isFitToWidth = false; currentScale = Math.min(3.0, currentScale + 0.25); applyZoom(); });
-elements.btnZoomOut.addEventListener('click', () => { isFitToWidth = false; currentScale = Math.max(0.5, currentScale - 0.25); applyZoom(); });
-elements.zoomText.addEventListener('click', () => { isFitToWidth = true; applyZoom(); });
+// --- ZOOM CONTROLS WITH PIVOT MATH ---
 
 function updateZoomUI() { elements.zoomText.textContent = isFitToWidth ? 'Fit' : `${Math.round(currentScale * 100)}%`; }
+
+elements.btnZoomIn.addEventListener('click', () => { 
+    isFitToWidth = false; 
+    applyZoom(Math.min(4.0, currentScale + 0.25)); 
+});
+elements.btnZoomOut.addEventListener('click', () => { 
+    isFitToWidth = false; 
+    applyZoom(Math.max(0.5, currentScale - 0.25)); 
+});
+elements.zoomText.addEventListener('click', () => { 
+    isFitToWidth = true; 
+    applyZoom(null); 
+});
+
+let zoomTimeout;
+window.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault(); 
+        if (!currentPdfDoc || !defaultViewport) return;
+
+        isFitToWidth = false;
+        
+        const zoomSensitivity = 0.01;
+        const newScale = Math.min(4.0, Math.max(0.5, currentScale - (e.deltaY * zoomSensitivity)));
+        
+        const scaleRatio = newScale / currentScale;
+        const scrollCenter = window.scrollY + (window.innerHeight / 2);
+        const newScrollCenter = scrollCenter * scaleRatio;
+        
+        currentScale = newScale;
+        updateZoomUI();
+
+        for (let i = 1; i <= currentPdfDoc.numPages; i++) {
+            const wrapper = document.getElementById(`page-${i}`);
+            if (wrapper) {
+                wrapper.style.width = `${Math.floor(defaultViewport.width * currentScale)}px`;
+                wrapper.style.height = `${Math.floor(defaultViewport.height * currentScale)}px`;
+                const oldCanvas = wrapper.querySelector('canvas');
+                if (oldCanvas) {
+                    oldCanvas.style.width = '100%';
+                    oldCanvas.style.height = '100%';
+                }
+            }
+        }
+
+        window.scrollTo(0, newScrollCenter - (window.innerHeight / 2));
+
+        clearTimeout(zoomTimeout);
+
+        zoomTimeout = setTimeout(() => {
+            renderToken++; 
+            renderedPages.clear();
+            renderingQueue.clear();
+            
+            for (let i = 1; i <= currentPdfDoc.numPages; i++) {
+                const wrapper = document.getElementById(`page-${i}`);
+                if (wrapper) {
+                    renderObserver.unobserve(wrapper);
+                    renderObserver.observe(wrapper);
+                }
+            }
+        }, 200);
+    }
+}, { passive: false });
+
+function applyZoom(targetScale) {
+    if (!currentPdfDoc || !defaultViewport) return;
+    renderToken++; 
+    renderedPages.clear();
+    renderingQueue.clear();
+
+    const prevScale = currentScale;
+    const availableWidth = window.innerWidth - 64;
+    
+    if (isFitToWidth || targetScale === null) {
+        currentScale = Math.min(2.0, availableWidth / defaultViewport.width);
+    } else {
+        currentScale = targetScale;
+    }
+    
+    const scaleRatio = currentScale / prevScale;
+    const scrollCenter = window.scrollY + (window.innerHeight / 2);
+    const newScrollCenter = scrollCenter * scaleRatio;
+
+    updateZoomUI();
+
+    for (let i = 1; i <= currentPdfDoc.numPages; i++) {
+        const wrapper = document.getElementById(`page-${i}`);
+        if (wrapper) {
+            const oldCanvas = wrapper.querySelector('canvas');
+            if (oldCanvas) {
+                oldCanvas.style.width = '100%';
+                oldCanvas.style.height = '100%';
+            }
+            wrapper.style.width = `${Math.floor(defaultViewport.width * currentScale)}px`;
+            wrapper.style.height = `${Math.floor(defaultViewport.height * currentScale)}px`;
+            
+            renderObserver.unobserve(wrapper);
+            renderObserver.observe(wrapper);
+        }
+    }
+    
+    window.scrollTo(0, newScrollCenter - (window.innerHeight / 2));
+}
 
 function setView(viewName) {
     Object.values(views).forEach(v => v.classList.remove('is-active'));
@@ -111,6 +213,8 @@ function setView(viewName) {
 }
 
 elements.btnClose.addEventListener('click', () => setView('home'));
+
+// --- DATABASE ---
 
 let db;
 const request = indexedDB.open("DocumentStore", 1);
@@ -177,6 +281,8 @@ function updateRecentFilesList() {
     };
 }
 
+// --- PDF RENDERING CORE ---
+
 function loadDocument(arrayBuffer) {
     setView('reader');
     elements.pdfContainer.innerHTML = `<div class="skeleton-page"></div><div class="skeleton-page" style="opacity: 0.5;"></div>`;
@@ -223,38 +329,11 @@ function setupScaffolding() {
     }
 }
 
-function applyZoom() {
-    if (!currentPdfDoc || !defaultViewport) return;
-    renderToken++; 
-    renderedPages.clear();
-    renderingQueue.clear();
-
-    const availableWidth = window.innerWidth - 64;
-    if (isFitToWidth) {
-        currentScale = Math.min(2.0, availableWidth / defaultViewport.width);
-    }
-    updateZoomUI();
-
-    for (let i = 1; i <= currentPdfDoc.numPages; i++) {
-        const wrapper = document.getElementById(`page-${i}`);
-        if (wrapper) {
-            const oldCanvas = wrapper.querySelector('canvas');
-            if (oldCanvas) {
-                oldCanvas.style.width = '100%';
-                oldCanvas.style.height = '100%';
-            }
-            wrapper.style.width = `${Math.floor(defaultViewport.width * currentScale)}px`;
-            wrapper.style.height = `${Math.floor(defaultViewport.height * currentScale)}px`;
-        }
-    }
-}
-
-// PRO-LEVEL FIX: Aggressive GPU memory cleanup
 function cleanupPage(pageNum) {
     if (!renderedPages.has(pageNum)) return;
     const wrapper = document.getElementById(`page-${pageNum}`);
     if (wrapper) {
-        // Zeroing canvas dimensions forces immediate VRAM garbage collection
+        // Explicitly destroy canvas contexts to instantly free VRAM
         wrapper.querySelectorAll('canvas').forEach(canvas => {
             canvas.width = 0;
             canvas.height = 0;
