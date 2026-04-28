@@ -2,6 +2,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 const views = { home: document.getElementById('home-view'), reader: document.getElementById('reader-view') };
 const elements = {
+    uploadCard: document.querySelector('.upload-card'),
     fileInput: document.getElementById('file-input'),
     pdfContainer: document.getElementById('pdf-container'),
     recentList: document.getElementById('recent-list'),
@@ -41,14 +42,13 @@ const counterObserver = new IntersectionObserver((entries) => {
     });
 }, { root: null, rootMargin: '0px', threshold: 0.5 });
 
-// AGGRESSIVE RAM LIMITER: 50% margin means it only holds ~3 pages in memory max
 const renderObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         const pageNum = parseInt(entry.target.id.split('-')[1]);
         if (entry.isIntersecting) {
             renderPage(pageNum);
         } else {
-            cleanupPage(pageNum); // Instantly drop off-screen pages to save RAM
+            cleanupPage(pageNum);
         }
     });
 }, { root: null, rootMargin: '50% 0px 50% 0px', threshold: 0 });
@@ -90,7 +90,7 @@ elements.filterBtns.forEach(btn => {
     });
 });
 
-// --- ZOOM CONTROLS WITH PIVOT MATH ---
+// --- ZOOM CONTROLS ---
 
 function updateZoomUI() { elements.zoomText.textContent = isFitToWidth ? 'Fit' : `${Math.round(currentScale * 100)}%`; }
 
@@ -214,16 +214,19 @@ function setView(viewName) {
 
 elements.btnClose.addEventListener('click', () => setView('home'));
 
-// --- DATABASE ---
+// --- DATABASE & FILE HANDLING ---
 
 let db;
 const request = indexedDB.open("DocumentStore", 1);
 request.onupgradeneeded = (e) => { db = e.target.result; if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'name' }); };
 request.onsuccess = (e) => { db = e.target.result; updateRecentFilesList(); };
 
-elements.fileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file || file.type !== 'application/pdf') { this.value = ''; return; }
+// Core function to process the file whether clicked or dragged
+function handleFileSelection(file) {
+    if (!file || file.type !== 'application/pdf') { 
+        elements.fileInput.value = ''; 
+        return; 
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
         const arrayBuffer = event.target.result;
@@ -232,7 +235,32 @@ elements.fileInput.addEventListener('change', function(e) {
         loadDocument(arrayBuffer);
     };
     reader.readAsArrayBuffer(file);
+}
+
+// Event 1: Standard click-to-upload
+elements.fileInput.addEventListener('change', (e) => handleFileSelection(e.target.files[0]));
+
+// Event 2: Drag and Drop support
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    elements.uploadCard.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, false);
 });
+
+['dragenter', 'dragover'].forEach(eventName => {
+    elements.uploadCard.addEventListener(eventName, () => elements.uploadCard.classList.add('is-dragover'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    elements.uploadCard.addEventListener(eventName, () => elements.uploadCard.classList.remove('is-dragover'), false);
+});
+
+elements.uploadCard.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    handleFileSelection(file);
+}, false);
+
 
 function saveFileToDB(fileName, arrayBuffer) {
     const tx = db.transaction(['files'], 'readwrite');
@@ -333,7 +361,6 @@ function cleanupPage(pageNum) {
     if (!renderedPages.has(pageNum)) return;
     const wrapper = document.getElementById(`page-${pageNum}`);
     if (wrapper) {
-        // Explicitly destroy canvas contexts to instantly free VRAM
         wrapper.querySelectorAll('canvas').forEach(canvas => {
             canvas.width = 0;
             canvas.height = 0;
