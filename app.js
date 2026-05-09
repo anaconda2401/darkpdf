@@ -32,6 +32,18 @@ const renderedPages = new Set();
 const renderingQueue = new Set();
 const renderTasks = new Map();
 
+const eventBus = new pdfjsViewer.EventBus();
+const linkService = new pdfjsViewer.PDFLinkService({ eventBus });
+linkService.setViewer({
+    scrollPageIntoView({ pageNumber }) {
+        const wrapper = document.getElementById(`page-${pageNumber}`);
+        if (wrapper) {
+            const topOffset = wrapper.offsetTop - 60;
+            window.scrollTo({ top: topOffset, behavior: 'smooth' });
+        }
+    }
+});
+
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 const counterObserver = new IntersectionObserver((entries) => {
@@ -349,6 +361,7 @@ function loadDocument(arrayBuffer, password = '') {
 
     pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer), password: password }).promise.then(pdf => {
         currentPdfDoc = pdf;
+        linkService.setDocument(pdf, null);
         isFitToWidth = true;
         elements.pageCount.textContent = pdf.numPages;
         elements.pageNum.textContent = '1';
@@ -411,6 +424,11 @@ function cleanupPage(pageNum) {
             canvas.height = 0;
         });
         wrapper.innerHTML = ''; 
+    }
+    if (currentPdfDoc) {
+        currentPdfDoc.getPage(pageNum).then(page => {
+            page.cleanup();
+        }).catch(e => {});
     }
     renderedPages.delete(pageNum);
 }
@@ -479,6 +497,25 @@ function renderPage(pageNum) {
                 viewport: viewport,
                 textDivs: []
             });
+
+            return page.getAnnotations();
+        }).then(annotations => {
+            if (currentToken !== renderToken) return;
+
+            if (annotations && annotations.length > 0) {
+                const annotationLayerDiv = document.createElement('div');
+                annotationLayerDiv.className = 'annotationLayer';
+                wrapper.appendChild(annotationLayerDiv);
+
+                pdfjsLib.AnnotationLayer.render({
+                    viewport: viewport.clone({ dontFlip: true }),
+                    div: annotationLayerDiv,
+                    annotations: annotations,
+                    page: page,
+                    linkService: linkService,
+                    downloadManager: null
+                });
+            }
 
             renderedPages.add(pageNum);
             renderingQueue.delete(pageNum);
