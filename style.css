@@ -167,11 +167,11 @@ input[type="file"] { display: none; }
     transition: filter var(--duration-normal) var(--ease-standard);
 }
 
-/* Reduced brightness slightly more to kill any remaining glare */
-body.theme-dark.filter-default .pdf-page-wrapper { filter: invert(88%) hue-rotate(180deg) sepia(15%) contrast(85%) brightness(85%); }
-body.theme-dark.filter-soft .pdf-page-wrapper { filter: invert(85%) hue-rotate(180deg) sepia(10%) contrast(80%) brightness(90%); }
-body.theme-dark.filter-sepia .pdf-page-wrapper { filter: invert(88%) hue-rotate(180deg) sepia(45%) contrast(80%) brightness(85%); }
-body.theme-dark.filter-peach .pdf-page-wrapper { filter: invert(88%) hue-rotate(180deg) sepia(40%) saturate(150%) contrast(80%) brightness(90%); }
+/* Smart dark mode filters (no inversion since PDF.js handles it natively) */
+body.theme-dark.filter-default .pdf-page-wrapper { filter: none; }
+body.theme-dark.filter-soft .pdf-page-wrapper { filter: sepia(10%) contrast(90%) brightness(95%); }
+body.theme-dark.filter-sepia .pdf-page-wrapper { filter: sepia(30%) contrast(90%) brightness(90%); }
+body.theme-dark.filter-peach .pdf-page-wrapper { filter: sepia(30%) saturate(150%) contrast(90%) brightness(90%); }
 
 /* Restored shadow for light theme ONLY, where it actually works like a shadow */
 body.theme-light .pdf-page-wrapper { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border: none; }

@@ -1,4 +1,4 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const views = { home: document.getElementById('home-view'), reader: document.getElementById('reader-view') };
 const elements = {
@@ -30,6 +30,7 @@ let defaultViewport = null;
 
 const renderedPages = new Set();
 const renderingQueue = new Set();
+const renderTasks = new Map();
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -51,7 +52,7 @@ const renderObserver = new IntersectionObserver((entries) => {
             cleanupPage(pageNum);
         }
     });
-}, { root: null, rootMargin: '50% 0px 50% 0px', threshold: 0 });
+}, { root: null, rootMargin: '10% 0px 10% 0px', threshold: 0 });
 
 function updateSettingsUI() {
     elements.themeBtns.forEach(btn => btn.classList.toggle('is-active', btn.dataset.themeVal === document.body.classList[0]));
@@ -79,6 +80,21 @@ elements.themeBtns.forEach(btn => {
         document.body.className = `${btn.dataset.themeVal} ${document.body.classList[1]}`;
         localStorage.setItem('dp-theme', btn.dataset.themeVal);
         updateSettingsUI();
+        
+        if (currentPdfDoc) {
+            renderToken++; 
+            renderedPages.clear();
+            renderingQueue.clear();
+            renderTasks.forEach(task => { try { task.cancel(); } catch(e){} });
+            renderTasks.clear();
+            for (let i = 1; i <= currentPdfDoc.numPages; i++) {
+                const wrapper = document.getElementById(`page-${i}`);
+                if (wrapper) {
+                    renderObserver.unobserve(wrapper);
+                    renderObserver.observe(wrapper);
+                }
+            }
+        }
     });
 });
 
@@ -146,6 +162,8 @@ window.addEventListener('wheel', (e) => {
             renderToken++; 
             renderedPages.clear();
             renderingQueue.clear();
+            renderTasks.forEach(task => { try { task.cancel(); } catch(e){} });
+            renderTasks.clear();
             
             for (let i = 1; i <= currentPdfDoc.numPages; i++) {
                 const wrapper = document.getElementById(`page-${i}`);
@@ -163,6 +181,8 @@ function applyZoom(targetScale) {
     renderToken++; 
     renderedPages.clear();
     renderingQueue.clear();
+    renderTasks.forEach(task => { try { task.cancel(); } catch(e){} });
+    renderTasks.clear();
 
     const prevScale = currentScale;
     const availableWidth = window.innerWidth - 64;
@@ -208,6 +228,8 @@ function setView(viewName) {
         renderToken++;
         renderedPages.clear();
         renderingQueue.clear();
+        renderTasks.forEach(task => { try { task.cancel(); } catch(e){} });
+        renderTasks.clear();
         updateRecentFilesList(); 
     }
 }
@@ -231,7 +253,13 @@ function handleFileSelection(file) {
     reader.onload = (event) => {
         const arrayBuffer = event.target.result;
         const safeName = file.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        saveFileToDB(safeName, arrayBuffer);
+        
+        if (arrayBuffer.byteLength > 30 * 1024 * 1024) {
+            alert('File is larger than 30MB. It will be opened but not saved to Recent Files to preserve storage quota.');
+        } else {
+            saveFileToDB(safeName, arrayBuffer);
+        }
+        
         loadDocument(arrayBuffer);
     };
     reader.readAsArrayBuffer(file);
@@ -311,13 +339,15 @@ function updateRecentFilesList() {
 
 // --- PDF RENDERING CORE ---
 
-function loadDocument(arrayBuffer) {
+function loadDocument(arrayBuffer, password = '') {
     setView('reader');
     elements.pdfContainer.innerHTML = `<div class="skeleton-page"></div><div class="skeleton-page" style="opacity: 0.5;"></div>`;
     renderedPages.clear();
     renderingQueue.clear();
+    renderTasks.forEach(task => { try { task.cancel(); } catch(e){} });
+    renderTasks.clear();
 
-    pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise.then(pdf => {
+    pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer), password: password }).promise.then(pdf => {
         currentPdfDoc = pdf;
         isFitToWidth = true;
         elements.pageCount.textContent = pdf.numPages;
@@ -328,7 +358,17 @@ function loadDocument(arrayBuffer) {
         defaultViewport = page1.getViewport({ scale: 1.0 });
         setupScaffolding();
     }).catch(error => {
-        elements.pdfContainer.innerHTML = `<div class="empty-state">Failed to render document.</div>`;
+        if (error.name === 'PasswordException') {
+            const promptMsg = error.code === 2 ? 'Incorrect password. Please try again:' : 'This PDF is password protected. Please enter the password:';
+            const enteredPassword = prompt(promptMsg);
+            if (enteredPassword !== null && enteredPassword.trim() !== '') {
+                loadDocument(arrayBuffer, enteredPassword);
+            } else {
+                elements.pdfContainer.innerHTML = `<div class="empty-state">Document requires a password to open.</div>`;
+            }
+        } else {
+            elements.pdfContainer.innerHTML = `<div class="empty-state">Failed to render document.</div>`;
+        }
     });
 }
 
@@ -358,6 +398,11 @@ function setupScaffolding() {
 }
 
 function cleanupPage(pageNum) {
+    if (renderTasks.has(pageNum)) {
+        try { renderTasks.get(pageNum).cancel(); } catch (e) {}
+        renderTasks.delete(pageNum);
+        renderingQueue.delete(pageNum);
+    }
     if (!renderedPages.has(pageNum)) return;
     const wrapper = document.getElementById(`page-${pageNum}`);
     if (wrapper) {
@@ -383,7 +428,7 @@ function renderPage(pageNum) {
         }
 
         const viewport = page.getViewport({ scale: currentScale });
-        const outputScale = isMobile ? 1 : Math.max(2, window.devicePixelRatio || 1);
+        const outputScale = Math.min(2, window.devicePixelRatio || 1);
 
         const wrapper = document.getElementById(`page-${pageNum}`);
         if (!wrapper) return;
@@ -400,12 +445,20 @@ function renderPage(pageNum) {
 
         const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
-        page.render({
+        const isDarkMode = document.body.classList.contains('theme-dark');
+        const pageColors = isDarkMode ? { background: '#161616', foreground: '#d0d0d0' } : undefined;
+
+        const renderTask = page.render({
             canvasContext: context,
             transform: transform,
             viewport: viewport,
-            intent: 'print'
-        }).promise.then(() => {
+            intent: 'print',
+            pageColors: pageColors
+        });
+        
+        renderTasks.set(pageNum, renderTask);
+
+        renderTask.promise.then(() => {
             if (currentToken !== renderToken) return;
             
             wrapper.innerHTML = ''; 
@@ -429,6 +482,13 @@ function renderPage(pageNum) {
 
             renderedPages.add(pageNum);
             renderingQueue.delete(pageNum);
+            renderTasks.delete(pageNum);
+        }).catch(err => {
+            if (err.name !== 'RenderingCancelledException') {
+                console.error('Render error:', err);
+            }
+            renderingQueue.delete(pageNum);
+            renderTasks.delete(pageNum);
         });
     });
 }
